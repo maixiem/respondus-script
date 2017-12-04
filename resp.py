@@ -4,7 +4,8 @@ from datetime import date
 import io
 import re
 import Tkinter, tkFileDialog
-from Tkinter import Tk, Label, Button, StringVar
+from Tkinter import Tk, Label, Button, StringVar, IntVar, Radiobutton, Frame, Text
+import tkMessageBox
 
 ######GLOBAL DEFINTIONS######
 nmask = r"\d+\.\\~"
@@ -67,17 +68,28 @@ class main_gui:
     def __init__(self,master):
         self.master = master
         self.body = StringVar()
-        Label(master, textvariable=self.body).pack()
+        frame = Frame(master,width=300,padx=5,pady=5)
+        frame.grid(columnspan='5')
+        Label(master, textvariable=self.body, justify='left',wraplength=300).grid(row='0',column='0',columnspan='4',sticky='w'+'e',padx=5)
         self.prompt(master)
     def prompt(self,master):
         master.title("RESP.PY UTILITY")
-        self.body.set("Welcome to Resp.py! Please choose an rtf file to format.\n")
+        bod = "Welcome to Resp.py! This program was made to help proofread your file for importing to Respondus.\n"
+        bod +="------------------------------------------------------------\n"
+        bod += "[OPTIONS] \n Question number format:"
+        self.var = IntVar()
+        Radiobutton(self.master, text="Parentheses (ex: 1), 2), 3)...)", variable=var, value=")").grid(row='1',column='0',sticky='w',columnspan='2',padx=10,pady=5)
+        Radiobutton(self.master, text="Dot (ex: 1., 2., 3. ...)", variable=var, value=".").grid(row='1',column='2',sticky='w',padx=10,pady=5)
+        self.body.set(bod)
 
-        self.greet_button = Button(master,text="Browse...", command=self.browse)
-        self.greet_button.pack()
+        self.browse_button = Button(master,text="Browse...", command=self.browse)
+        self.browse_button.grid(row='2',column='4',sticky='w',padx=10,pady=10)
 
         self.close_button = Button(master,text="Exit", command=master.quit)
-        self.close_button.pack()
+        self.close_button.grid(row='2',column='0',sticky='w'+'e',padx=10,pady=10)
+
+        self.help_button = Button(master,text="Help", command=master.quit)
+        self.help_button.grid(row='2',column='1',sticky='w',padx=10,pady=10)
     def browse(self):
         fp = tkFileDialog.askopenfilename(filetypes=[("Rich Text","*.rtf")])
         if fp!= '':
@@ -86,12 +98,13 @@ class main_gui:
             for line in fd.readlines():
                 content += line
             fd.close()
-            questions = the_rest(remove_ems(content))
-            rem_low(questions)
-            renum(questions)
-            self.quiz = ""
-            self.quiz = get_quiz(questions,self.quiz)
-            self.quiz = get_answers(questions,self.quiz)
+            if self.var == 'MCG':
+                questions = the_rest(remove_ems(content))
+                rem_low(questions)
+                renum(questions)
+                self.quiz = ""
+                self.quiz = get_quiz(questions,self.quiz)
+                self.quiz = get_answers(questions,self.quiz)
             self.save()
         else:
             self.prompt()
@@ -100,22 +113,28 @@ class main_gui:
         if f is None:
             return 0
         elif f:
-             fd = open(f, 'w')
-             fd.write(self.quiz)
-             fd.close()
-             self.body.set("Save successful.\n If you would like to format another file, click browse.")
-             return
+             try:
+                 fd = open(f, 'w')
+                 fd.write(self.quiz)
+                 fd.close()
+                 tkMessageBox.showinfo("Save state", "(%s) was saved successfully" % f)
+                 return
+             except:
+                 tkMessageBox.showWarning("Save state", "Unable to save this file.")
+                 return
         else:
             return 0
     def quit(self):
-        self.master.destroy()
+        self.master.protocol("WM_DELETE_WINDOW", on_closing(self.master))
+
 
 def main():
     root = Tk()
     master = main_gui(root)
     root.mainloop()
-    root.destroy()
-
+def on_closing(master):
+    if tkMessageBox.askokcancel("Quit", "Do you want to quit?"):
+        master.destroy()
 def get_quiz(questions,quiz):
     for q in questions:
         quiz+=q.get_question()
@@ -150,7 +169,7 @@ def remove_ems(content):
             pass
         if key == 0 and next_key == 1:
             markers[m].end = markers[m+1].start-1
-    
+
     for m in markers:
         if m.iterable == 0:
             delete.append(m.start)
@@ -161,7 +180,7 @@ def remove_ems(content):
         return content
     else:
         return content
-    
+
 def the_rest(content):
     global possible_naswers
     global nmask
@@ -169,7 +188,7 @@ def the_rest(content):
 
     numbers = []
     numbers = [num.group(0)[:len(num.group(0))-2] for num in re.finditer(nmask,content)]
-    
+
     starts = []
     for m in re.finditer(nmask,content):
         starts.append(m.start())
@@ -246,4 +265,3 @@ def mark_finder(): #finds the matching section header in the given content and a
 
 if __name__ == "__main__":
     main()
-
